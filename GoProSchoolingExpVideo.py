@@ -6,7 +6,6 @@ gpCam = GoProCamera.GoPro()
 
 from sys import exit
 
-
 import time
 
 def video(): # defines video acquisition function 
