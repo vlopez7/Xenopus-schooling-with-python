@@ -4,47 +4,56 @@
 from goprocam import GoProCamera, constants #imports GoPro capabilities
 gpCam = GoProCamera.GoPro()
 
-# Open the first found LabJack U3
-import u3
+from sys import exit
+
 
 import time
 
-# Tic toc function so we can keep track of the timing of stimulus presentations
-def tic():
-    #Homemade version of matlab tic and toc functions
-    import time
-    global startTime_for_tictoc
-    startTime_for_tictoc = time.time()
+def video(): # defines video acquisition function 
+    gpCam.shoot_video(30) # shoots 30 second video for tracking 
+    v = time_stamp()
+    video_stamp.append(v)
+    print video_stamp
 
-def toc():
-    import time
-    if 'startTime_for_tictoc' in globals():
-        print "Elapsed time is " + str(time.time() - startTime_for_tictoc) + " seconds."
-    else:
-        print "Toc: start time not set"
-
-
-d = u3.U3()
-
-FIO4_STATE_REGISTER = 6004 # defines which connection will be used to deliver power to vibrator
-tic()
-stim_stamp = [] # creates empty vector to store time stamps of stimulus presentations
-gpCam.shoot_video() # initializes video acquisition from GoPro
-for x in range(1,6):
-# Set pin assignments to the factory default condition
-    d.writeRegister(FIO4_STATE_REGISTER, 0) # Set FIO4 low, LED on
-
-# Deliver voltage to FIO4 to power the vibrator
-
-    d.writeRegister(FIO4_STATE_REGISTER, 1) # Set FIO4 high, LED off
-
-    time.sleep(0.15) # wait for 0.15 seconds
-    toc()
-    stim_stamp.append(str(time.time() - startTime_for_tictoc))
-    d.writeRegister(FIO4_STATE_REGISTER, 0)  # Set FIO4 low, LED on
-
-    time.sleep(180) # wait ten seconds
-
-    print x
-
+def stimulate():
+    import u3 # Open the first found LabJack U3
+    vibrator = u3.U3() # defines vibrator variable as u3 labjack
+    FIO4_STATE_REGISTER = 6004 # defines which connection will be used to deliver power to vibrator
+    vibrator.writeRegister(FIO4_STATE_REGISTER, 1) # Deliver voltage to FIO4 to power the vibrator
+    time.sleep(0.15) # wait for 0.15 seconds, the length of the stimulus vibration
+    t = time_stamp()
+    stim_stamp.append(t)
     print stim_stamp
+    vibrator.writeRegister(FIO4_STATE_REGISTER, 0) # Deliver voltage to FIO4 to power the vibrator
+
+global start_timer # makes the variable global 
+start_timer = time.time()
+end_timer = start_timer + 3600 # this is when the experiment should stop running
+print start_timer
+
+
+def time_stamp(): # this function is used to get time stamps for stimuli presentations & videos
+    elapsed_time = time.time() - start_timer
+    return elapsed_time
+
+
+stim_stamp = [] # creates an empty list vector to store time stamps of stimulus presentations
+video_stamp = [] # creates an empty list vector to store time stamps of videos
+
+
+def start(): # this function runs the actual experiment
+    while round(end_timer - time.time()) > 0: # creates a timer using a while loop
+        video() # calls on the GoPro to take a video
+
+        time.sleep(150) # 2.5 minute wait before stimulus
+
+        stimulate() # u3 labjack delivers power to vibrator to reset schooling pattern
+
+        time.sleep(150) # 2.5 minute wait before repeating the loop
+
+start()
+
+print stim_stamp # prints vector with stimuli presentation time stamps
+print video_stamp # prints vector with video time stamps
+
+gpCam.downloadAll()
